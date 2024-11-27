@@ -1,0 +1,30 @@
+TODO:
+
+menu stuff:
+- start of script, if no dataset given as cmd line parameter, prompt for a dataset
+- prompt for if dataset is to be modified or copied -> modified (then do)
+- read specified dataset into pandas dataframe (use csv first for ease)
+- if no function given as cmd line parameter, prompt for a function
+- continue prompt until quit
+
+Functionality:
+- output column headers
+- output total time & time steps (avg if not consistent)
+- output raw data
+- output single column data
+- plot single column data to time axis
+- vector add acceleration columns (append to current file) (find module for vector addition? nvm this is literally probably just numpy)
+- scipy/numpy integrate acceleration for velocity vector (append to file)
+- scipy/numpy integrate velocity for position vector (append to file)
+- "Noise signal removal"
+- "Event detection" with vibration sensors?
+
+
+create plots of the raw data points:
+- auto-set boundaries for the plots
+
+Data Analysis:
+- vector add accelerometer data -> scipy integrate velocity -> scipy integrate position
+- noise signal removal
+- figure out what to do with the vibration sensors (Event detection?)
+
