@@ -1,5 +1,6 @@
-data_file: C:\Users\Halos\PycharmProjects\newpython_test\Test Data\OCT12F2.CSV
-working_file: C:\Users\Halos\PycharmProjects\newpython_test\Working Data\temp
-output_file: C:\Users\Halos\PycharmProjects\newpython_test\Output Data\temp
-images_path: C:\Users\Halos\PycharmProjects\newpython_test\images
+data_file: C:\Users\Sam\PycharmProjects\ses307-analysis\ses307-analysis\Test Data\OCT12F2.CSV
+working_file: C:\Users\Sam\PycharmProjects\ses307-analysis\ses307-analysis\Working Data\temp.CSV
+output_path: C:\Users\Sam\PycharmProjects\ses307-analysis\ses307-analysis\Output Data\
+images_path: C:\Users\Sam\PycharmProjects\ses307-analysis\ses307-analysis\images\
 plt_config: g-
+recover_temp_mode: False
