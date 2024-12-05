@@ -6,10 +6,11 @@ import numpy as np
 import pandas as pd
 import os
 import vpython as vp
+import scipy as sp
 
 
 def read_config_file(path):
-    '''reads config file at config_path, and reads each setting & value pair into an array.
+    '''reads config file at path, and reads each setting & value pair into a dictionary.
     Format of config file should be [setting]: [value].'''
     with open(path,mode='r') as config_file:
         config_options = {}
@@ -26,7 +27,7 @@ def read_config_file(path):
     return config_options
 read_config_file.args = []
 # read config file here (not main) since it's settings are necessary for many functions
-config_path = r'C:\Users\Sam\PycharmProjects\ses307-analysis\ses307-analysis\config.txt'
+config_path = r'C:\Users\Halos\PycharmProjects\newpython_test\config.txt'
 config = read_config_file(config_path)
 
 def update_file(dataset,target_file=config["working_file"]): # updates targeted file with the loaded dataframe
@@ -35,6 +36,18 @@ def update_file(dataset,target_file=config["working_file"]): # updates targeted 
     print(f'Updating file {target_file} with dataset: {dataset}')
     dataset.to_csv(target_file)
 update_file.args = ['dataset',"target_file"]
+
+def add_timestamps():
+    t_step = int(config["time_step"])
+    print(f"Timestamps not found in {config["working_file"]}. Adding them assuming {t_step} ms between each event.")
+    dataset = pd.read_csv(config["working_file"])
+    time_list = []
+    for i in range(dataset.shape[0]):
+        time_list.append(i*t_step)
+    time_series = pd.Series(time_list,name="Time Stamp [ms]")
+    dataset.insert(len(dataset.columns),"Time Stamp [ms]",time_series)
+    update_file(dataset)
+add_timestamps.args = []
 
 def print_headers():
     dataset = pd.read_csv(config["working_file"], index_col="Time Stamp [ms]")
@@ -79,7 +92,7 @@ def plot_col_data(column_label=None,plot_name=None):
     print(f'Plot successfully saved to {im_path}')
 plot_col_data.args = ["plot_name"]
 
-def integrate_col(new_column_label,column_label=None): # integrates column using scipy
+def integrate_col(new_column_label,column_label=None): # integrates column using numerical methods
     dataset = pd.read_csv(config["working_file"], index_col="Time Stamp [ms]")
     if not column_label:
         print(f'Available columns:')
@@ -89,12 +102,35 @@ def integrate_col(new_column_label,column_label=None): # integrates column using
     print(f'Data column {column_label}:\n{data}')
     times = dataset.index.to_numpy()*0.001
     print(f'Time column:\n{times}')
-    integral_result = np.cumsum(data)*0.150
+    integral_result = np.cumsum(data*0.150) # TODO Fix whatever is going wrong here... else something up with data?
     print(f'Integration Result for {new_column_label}:\n{integral_result}')
     print(f"number of dataset columns: {len(dataset.columns)}")
     dataset.insert(len(dataset.columns),new_column_label,integral_result)
     update_file(dataset)
 integrate_col.args = ['new_column_label']
+
+def filter_data(sigma=1):
+    dataset = pd.read_csv(config["working_file"], index_col="Time Stamp [ms]")
+    filtered_columns = ["Acceleration X (m/s^2)","Acceleration Y (m/s^2)","Acceleration Z (m/s^2)"]
+    for column in filtered_columns:
+        new_col = sp.ndimage.gaussian_filter(dataset[column],sigma)
+        new_col_name = column
+        dataset[new_col_name] = new_col
+    print(f'Filtered Columns: {filtered_columns}')
+    update_file(dataset)
+filter_data.args = []
+
+def subtract_median(column_label=None):
+    dataset = pd.read_csv(config["working_file"], index_col="Time Stamp [ms]")
+    while not column_label:
+        print(f'Available columns:')
+        print(dataset.columns)
+        column_label = str(input("Enter a column label:\n"))
+    median = dataset[column_label].median()
+    print(f'Median of {column_label} is {median}. Subtracting...')
+    dataset[column_label] = dataset[column_label]-median
+    update_file(dataset)
+subtract_median.args = []
 
 def integrate_vectors(): # calls integrate_col to acquire velocity and position data
     integrate_col('Velocity X (m/s)', column_label='Acceleration X (m/s^2)')
@@ -128,39 +164,57 @@ plot_vector_path.args = []
 def magnitude(x,y,z):
     return np.sqrt(x.to_numpy()**2 + y.to_numpy()**2 + z.to_numpy()**2)
 
-def generate_magnitudes():
+def generate_magnitudes(overwrite=False):
     dataset = pd.read_csv(config["working_file"], index_col="Time Stamp [ms]")
-    columns = dataset.columns
-    if "Acceleration Magnitude (m/s^2)" in columns:
+    if "Acceleration Magnitude (m/s^2)" in dataset.columns and not overwrite:
         print("Acceleration Magnitude data already in dataset. No calculation performed.")
-    elif "Acceleration X (m/s^2)" in columns and "Acceleration Y (m/s^2)" in columns and "Acceleration Z (m/s^2)" in columns:
+    elif "Acceleration X (m/s^2)" in dataset.columns and "Acceleration Y (m/s^2)" in dataset.columns and "Acceleration Z (m/s^2)" in dataset.columns:
         print("Acceleration data found in dataset.")
         a_mag = magnitude(dataset["Acceleration X (m/s^2)"],dataset["Acceleration Y (m/s^2)"],dataset["Acceleration Z (m/s^2)"])
         print(f"Acceleration magnitude calculated as:\n{a_mag}")
-        dataset.insert(len(dataset.columns), "Acceleration Magnitude (m/s^2)", a_mag)
+        if "Acceleration Magnitude (m/s^2)" in dataset.columns:
+            dataset["Acceleration Magnitude (m/s^2)"] = a_mag
+        else:
+            dataset.insert(len(dataset.columns), "Acceleration Magnitude (m/s^2)", a_mag)
         update_file(dataset)
-        dataset = pd.read_csv(config["working_file"], index_col="Time Stamp [ms]")
     else:
         print("No Acceleration data found in dataset")
-    if "Velocity Magnitude (m/s)" in columns:
+
+    dataset = pd.read_csv(config["working_file"], index_col="Time Stamp [ms]")
+    subtract_median("Acceleration Magnitude (m/s^2)")
+    if "Velocity Magnitude (m/s)" in dataset.columns and not overwrite:
         print("Velocity Magnitude data already in dataset. No calculation performed.")
-    elif "Velocity X (m/s)" in columns and "Velocity Y (m/s)" in columns and "Velocity Z (m/s)" in columns:
-        print("Velocity data found in dataset.")
-        v_mag = magnitude(dataset["Velocity X (m/s)"],dataset["Velocity Y (m/s)"],dataset["Velocity Z (m/s)"])
-        print(f"Velocity magnitude calculated as:\n{v_mag}")
-        dataset.insert(len(dataset.columns), "Velocity Magnitude (m/s)", v_mag)
-        update_file(dataset)
-        dataset = pd.read_csv(config["working_file"], index_col="Time Stamp [ms]")
+    elif  "Acceleration Magnitude (m/s^2)" in dataset.columns:
+        print("Generating Velocity Magnitude based on Acceleration Magnitude")
+        integrate_col("Velocity Magnitude (m/s)","Acceleration Magnitude (m/s^2)")
+
+    #    elif "Velocity X (m/s)" in columns and "Velocity Y (m/s)" in columns and "Velocity Z (m/s)" in columns:
+#        print("Velocity data found in dataset.")
+#        v_mag = magnitude(dataset["Velocity X (m/s)"],dataset["Velocity Y (m/s)"],dataset["Velocity Z (m/s)"])
+#        print(f"Velocity magnitude calculated as:\n{v_mag}")
+#        if "Velocity Magnitude (m/s)" in columns:
+#            dataset["Velocity Magnitude (m/s)"] = v_mag
+#        else:
+#            dataset.insert(len(dataset.columns), "Velocity Magnitude (m/s)", v_mag)
+#        update_file(dataset)
+#        dataset = pd.read_csv(config["working_file"], index_col="Time Stamp [ms]")
     else:
         print("No Velocity data found in dataset")
-    if "Displacement Position Magnitude (m)" in columns:
+    dataset = pd.read_csv(config["working_file"], index_col="Time Stamp [ms]")
+    if "Displacement Position Magnitude (m)" in dataset.columns and not overwrite:
         print("Displacement Position Magnitude data already in dataset. No calculation performed.")
-    elif "Displacement Position X (m)" in columns and "Displacement Position Y (m)" in columns and "Displacement Position Z (m)" in columns:
-        print("Displacement Position data found in dataset.")
-        d_mag = magnitude(dataset["Displacement Position X (m)"],dataset["Displacement Position Y (m)"],dataset["Displacement Position Z (m)"])
-        print(f"Displacement Position magnitude calculated as:\n{d_mag}")
-        dataset.insert(len(dataset.columns), "Displacement Position Magnitude (m)", d_mag)
-        update_file(dataset)
+    elif  "Velocity Magnitude (m/s)" in dataset.columns:
+        print("Generating Displacement Position Magnitude based on Velocity Magnitude")
+        integrate_col("Displacement Position Magnitude (m)","Velocity Magnitude (m/s)")
+#    elif "Displacement Position X (m)" in columns and "Displacement Position Y (m)" in columns and "Displacement Position Z (m)" in columns:
+#        print("Displacement Position data found in dataset.")
+#        d_mag = magnitude(dataset["Displacement Position X (m)"],dataset["Displacement Position Y (m)"],dataset["Displacement Position Z (m)"])
+#        print(f"Displacement Position magnitude calculated as:\n{d_mag}")
+#        if "Displacement Position Magnitude (m)" in columns:
+#            dataset["Displacement Position Magnitude (m)"] = d_mag
+#        else:
+#            dataset.insert(len(dataset.columns), "Displacement Position Magnitude (m)", d_mag)
+#        update_file(dataset)
     else:
         print("No Displacement Position data found in dataset")
 generate_magnitudes.args = []
@@ -173,6 +227,27 @@ def save_working_file(save_as_name):
     dataset.to_csv(output_file)
     print(f'Save successful.')
 save_working_file.args = ['save_as_name']
+
+def detect_events(threshold = 5):
+    dataset = pd.read_csv(config["working_file"], index_col="Time Stamp [ms]")
+    if "Acceleration Magnitude (m/s^2)" not in dataset.columns:
+        raise ValueError(f"Acceleration Magnitude not found in dataset. Calculate Magnitudes before calling detect_events().")
+    a = dataset["Acceleration Magnitude (m/s^2)"]
+    da = a.diff()
+    dadt = da/(float(config["time_step"])*0.001)
+    eventcatch = dadt > threshold
+    dataset.insert(len(dataset.columns), "Event?", eventcatch)
+    update_file(dataset)
+detect_events.args = ["threshold"]
+
+def trim_front_data(point_count):
+    dataset = pd.read_csv(config["working_file"], index_col="Unnamed: 0")
+    print(f"Trimming to the {point_count} last rows in dataset.")
+    print(f'Previous Dataset:\n{dataset}\n')
+    dataset = dataset[-int(point_count):]
+    print(f"New dataset:\n{dataset}\n")
+    update_file(dataset)
+trim_front_data.args = ["point_count"]
 
 def print_menu():
     '''prints out the menu_choices dictionary, which contains each string-function pairing'''
@@ -196,7 +271,10 @@ menu_choices = {
     'int': integrate_vectors,
     'pltv':plot_vector_path,
     'mag':generate_magnitudes,
-    'save':save_working_file
+    'save':save_working_file,
+    'filt':filter_data,
+    'subm': subtract_median,
+    'trim':trim_front_data
 }
 
 def execute_menu_option(choice):
@@ -229,9 +307,11 @@ if __name__ == '__main__':
     if str(config['recover_temp_mode']) == "True":
         datapath = config["working_file"]
         print(f"TEMP DATA RECOVERY. LOADED DATA FROM {datapath} INSTEAD OF CONFIG DEFAULT.")
-    initial_dataset = pd.read_csv(datapath, index_col="Time Stamp [ms]")
     # Generate working file from the initial dataset (all changes to data should occur in this file only)
+    initial_dataset = pd.read_csv(datapath,index_col=0)
     initial_dataset.to_csv(config['working_file'])
+    if "Time Stamp [ms]" not in initial_dataset.index.names:
+        add_timestamps()
 
     if not func:
         print_menu()

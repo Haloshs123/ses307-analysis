@@ -1,13 +1,16 @@
 TODO:
-
+- analysis pipeline: Make script that just does the things want do (imports pandas implimentation.py and then
+executes functions in desired order)
 
 Functionality:
 - "Noise signal removal" -> smoothing on acceleration function? gaussian probably?
     - detect significant outliers and replace them with nan?
+    - smoothing filter probably
 - Event detection... differentiate a-axis (or combined magnitude to account for rotation?) and determine periods that are above a threshold
 - Deviation...
     - find direction of average acceleration vector (buckets? adjacent n rows?), normalize it to 9.8 m/s^2 (assumption is motion is mostly downwards: deviations in acceleration are due to rotation more than an acceleration)
     - compare individual accelerations to this avg acc, potentially to determine rotations?
+- graph/axis formatting for producing report figures.
 
 
 create plots of the raw data points:
