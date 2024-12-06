@@ -67,7 +67,7 @@ def print_raw_data(): # entire dataframe
     print(data)
 print_raw_data.args = []
 
-def plot_col_data(column_label=None,plot_name=None):
+def plot_col_data(column_label=None,plot_name=None,ax1_label=None,ax2_label=None,graph_options=config['plt_config']):
     # Input prompt is inside the function so it prints available columns before the reader is prompted
     # TODO: (perhaps in a separate function) automatically determine labels for units/title
     dataset = pd.read_csv(config["working_file"], index_col="Time Stamp [ms]")
@@ -76,7 +76,7 @@ def plot_col_data(column_label=None,plot_name=None):
         print(dataset.columns)
         column_label = str(input("Enter a column label:\n"))
     data = dataset.loc[:,column_label]
-    times = dataset.index
+    times = dataset.index*0.001
     print("Plotting Data:")
     print(data)
     if plot_name is None:
@@ -86,7 +86,10 @@ def plot_col_data(column_label=None,plot_name=None):
     else:
         im_path = os.path.join(config['images_path'],plot_name)
         print(f'Image path: {im_path}')
-    plt.plot(times,data,config['plt_config'])
+    plt.plot(times,data,graph_options)
+    plt.xlabel(ax1_label)
+    plt.ylabel(ax2_label)
+    plt.title(plot_name)
     plt.savefig(im_path)
     plt.close()
     print(f'Plot successfully saved to {im_path}')
@@ -241,7 +244,7 @@ def detect_events(threshold = 5):
 detect_events.args = ["threshold"]
 
 def trim_front_data(point_count):
-    dataset = pd.read_csv(config["working_file"], index_col="Unnamed: 0")
+    dataset = pd.read_csv(config["working_file"])
     print(f"Trimming to the {point_count} last rows in dataset.")
     print(f'Previous Dataset:\n{dataset}\n')
     dataset = dataset[-int(point_count):]
