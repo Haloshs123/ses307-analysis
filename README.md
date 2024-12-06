@@ -5,7 +5,7 @@ main.py contains the current pipeline used for analysis.
 
 pandas implimentation.py contains the functions and (when ran) a framework for testing a pipeline process.
 
-When running, you shouldupdate config.txt with appropriate paths and config.txt's reference in both scripts.
+When running, you should update config.txt with appropriate paths and config.txt's reference in both scripts.
 
 
 /Test Data contains the raw data from each of the example tests and the two actual drops that were performed.
